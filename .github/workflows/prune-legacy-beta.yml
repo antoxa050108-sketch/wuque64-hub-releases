@@ -1,0 +1,85 @@
+name: Prune explicitly selected legacy beta binaries
+on:
+  push:
+    branches: [maintenance/prune-legacy-beta-20261127]
+    paths:
+      - '.github/workflows/prune-legacy-beta.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: wuque-legacy-beta-prune
+  cancel-in-progress: false
+jobs:
+  prune:
+    if: github.repository == 'antoxa050108-sketch/wuque64-hub-releases' && github.ref == 'refs/heads/maintenance/prune-legacy-beta-20261127'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Delete only snapshotted legacy EXE and blockmap assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, subprocess, tempfile, pathlib
+          repo = "antoxa050108-sketch/wuque64-hub-releases"
+          root = "repos/" + repo
+          selected = json.loads('''[{"id":785809577,"name":"Wuque64Hub-Portable-4.3.40-beta.1.1-x64.exe","size":132901010},{"id":786136888,"name":"Wuque64Hub-Portable-4.3.43-beta.10.1-x64.exe","size":189248156},{"id":786151773,"name":"Wuque64Hub-Portable-4.3.43-beta.11.1-x64.exe","size":189248230},{"id":786171032,"name":"Wuque64Hub-Portable-4.3.43-beta.12.1-x64.exe","size":189248340},{"id":786191323,"name":"Wuque64Hub-Portable-4.3.43-beta.13.1-x64.exe","size":189248430},{"id":786210884,"name":"Wuque64Hub-Portable-4.3.43-beta.14.1-x64.exe","size":189248419},{"id":786353519,"name":"Wuque64Hub-Portable-4.3.43-beta.15.1-x64.exe","size":189248538},{"id":786762602,"name":"Wuque64Hub-Portable-4.3.43-beta.16.1-x64.exe","size":189252937},{"id":786784932,"name":"Wuque64Hub-Portable-4.3.43-beta.17.1-x64.exe","size":189253656},{"id":785867363,"name":"Wuque64Hub-Portable-4.3.43-beta.2.1-x64.exe","size":132952547},{"id":787597728,"name":"Wuque64Hub-Portable-4.3.43-beta.20.1-x64.exe","size":189254358},{"id":787621218,"name":"Wuque64Hub-Portable-4.3.43-beta.24.1-x64.exe","size":189255819},{"id":787643040,"name":"Wuque64Hub-Portable-4.3.43-beta.27.1-x64.exe","size":189256377},{"id":785971064,"name":"Wuque64Hub-Portable-4.3.43-beta.3.1-x64.exe","size":132944857},{"id":785992953,"name":"Wuque64Hub-Portable-4.3.43-beta.4.1-x64.exe","size":132962741},{"id":786010211,"name":"Wuque64Hub-Portable-4.3.43-beta.5.1-x64.exe","size":189239286},{"id":786029119,"name":"Wuque64Hub-Portable-4.3.43-beta.6.1-x64.exe","size":189242504},{"id":786049289,"name":"Wuque64Hub-Portable-4.3.43-beta.7.1-x64.exe","size":189242838},{"id":786065899,"name":"Wuque64Hub-Portable-4.3.43-beta.8.1-x64.exe","size":189245555},{"id":786118594,"name":"Wuque64Hub-Portable-4.3.43-beta.9.1-x64.exe","size":189248023},{"id":785809415,"name":"Wuque64Hub-Setup-4.3.40-beta.1.1-x64.exe","size":143979520},{"id":785809796,"name":"Wuque64Hub-Setup-4.3.40-beta.1.1-x64.exe.blockmap","size":151341},{"id":786136526,"name":"Wuque64Hub-Setup-4.3.43-beta.10.1-x64.exe","size":144024354},{"id":786137210,"name":"Wuque64Hub-Setup-4.3.43-beta.10.1-x64.exe.blockmap","size":151815},{"id":786151452,"name":"Wuque64Hub-Setup-4.3.43-beta.11.1-x64.exe","size":144023823},{"id":786152178,"name":"Wuque64Hub-Setup-4.3.43-beta.11.1-x64.exe.blockmap","size":151610},{"id":786170524,"name":"Wuque64Hub-Setup-4.3.43-beta.12.1-x64.exe","size":144028233},{"id":786171420,"name":"Wuque64Hub-Setup-4.3.43-beta.12.1-x64.exe.blockmap","size":151818},{"id":786190978,"name":"Wuque64Hub-Setup-4.3.43-beta.13.1-x64.exe","size":144027277},{"id":786191699,"name":"Wuque64Hub-Setup-4.3.43-beta.13.1-x64.exe.blockmap","size":151889},{"id":786210665,"name":"Wuque64Hub-Setup-4.3.43-beta.14.1-x64.exe","size":144024964},{"id":786211269,"name":"Wuque64Hub-Setup-4.3.43-beta.14.1-x64.exe.blockmap","size":151757},{"id":786353149,"name":"Wuque64Hub-Setup-4.3.43-beta.15.1-x64.exe","size":144022486},{"id":786353905,"name":"Wuque64Hub-Setup-4.3.43-beta.15.1-x64.exe.blockmap","size":151717},{"id":786762371,"name":"Wuque64Hub-Setup-4.3.43-beta.16.1-x64.exe","size":144026407},{"id":786762956,"name":"Wuque64Hub-Setup-4.3.43-beta.16.1-x64.exe.blockmap","size":151796},{"id":786784633,"name":"Wuque64Hub-Setup-4.3.43-beta.17.1-x64.exe","size":144031233},{"id":786785332,"name":"Wuque64Hub-Setup-4.3.43-beta.17.1-x64.exe.blockmap","size":151753},{"id":785867001,"name":"Wuque64Hub-Setup-4.3.43-beta.2.1-x64.exe","size":144020259},{"id":785867724,"name":"Wuque64Hub-Setup-4.3.43-beta.2.1-x64.exe.blockmap","size":151722},{"id":787597276,"name":"Wuque64Hub-Setup-4.3.43-beta.20.1-x64.exe","size":144035402},{"id":787598254,"name":"Wuque64Hub-Setup-4.3.43-beta.20.1-x64.exe.blockmap","size":151620},{"id":787620870,"name":"Wuque64Hub-Setup-4.3.43-beta.24.1-x64.exe","size":144030992},{"id":787621901,"name":"Wuque64Hub-Setup-4.3.43-beta.24.1-x64.exe.blockmap","size":151970},{"id":787642557,"name":"Wuque64Hub-Setup-4.3.43-beta.27.1-x64.exe","size":144028571},{"id":787643716,"name":"Wuque64Hub-Setup-4.3.43-beta.27.1-x64.exe.blockmap","size":151628},{"id":785970788,"name":"Wuque64Hub-Setup-4.3.43-beta.3.1-x64.exe","size":144019926},{"id":785971346,"name":"Wuque64Hub-Setup-4.3.43-beta.3.1-x64.exe.blockmap","size":151653},{"id":785992723,"name":"Wuque64Hub-Setup-4.3.43-beta.4.1-x64.exe","size":144013073},{"id":785993382,"name":"Wuque64Hub-Setup-4.3.43-beta.4.1-x64.exe.blockmap","size":151528},{"id":786009968,"name":"Wuque64Hub-Setup-4.3.43-beta.5.1-x64.exe","size":144018942},{"id":786010473,"name":"Wuque64Hub-Setup-4.3.43-beta.5.1-x64.exe.blockmap","size":152020},{"id":786028850,"name":"Wuque64Hub-Setup-4.3.43-beta.6.1-x64.exe","size":144023601},{"id":786029584,"name":"Wuque64Hub-Setup-4.3.43-beta.6.1-x64.exe.blockmap","size":152338},{"id":786048945,"name":"Wuque64Hub-Setup-4.3.43-beta.7.1-x64.exe","size":144017483},{"id":786049810,"name":"Wuque64Hub-Setup-4.3.43-beta.7.1-x64.exe.blockmap","size":151622},{"id":786065555,"name":"Wuque64Hub-Setup-4.3.43-beta.8.1-x64.exe","size":144021033},{"id":786066227,"name":"Wuque64Hub-Setup-4.3.43-beta.8.1-x64.exe.blockmap","size":151893},{"id":786118389,"name":"Wuque64Hub-Setup-4.3.43-beta.9.1-x64.exe","size":144026865},{"id":786118865,"name":"Wuque64Hub-Setup-4.3.43-beta.9.1-x64.exe.blockmap","size":151452}]''')
+          def api(endpoint):
+              return json.loads(subprocess.check_output(["gh","api",endpoint],text=True))
+          def get_release():
+              r=api(root+"/releases/tags/beta-channel")
+              if r.get("draft") or not r.get("prerelease") or r.get("tag_name")!="beta-channel":
+                  raise RuntimeError("Unexpected release identity")
+              return r
+          def active_feed(r):
+              feeds=[x for x in r["assets"] if x["name"]=="beta.yml"]
+              if len(feeds)!=1: raise RuntimeError("Active feed missing")
+              with tempfile.TemporaryDirectory() as d:
+                  subprocess.run(["gh","release","download","beta-channel","--repo",repo,"--pattern","beta.yml","--dir",d],check=True)
+                  s=pathlib.Path(d,"beta.yml").read_text()
+              m=re.search(r"(?m)^version:\s*['\"]?(\d+\.\d+\.\d+-beta\.\d+\.\d+)['\"]?\s*$",s)
+              if not m: raise RuntimeError("Cannot parse active beta version")
+              return m.group(1), feeds[0]["id"], feeds[0].get("digest")
+          r=get_release()
+          active, feed_id, digest=active_feed(r)
+          if tuple(map(int,active.split("-")[0].split("."))) < (4,3,46):
+              raise RuntimeError("Active version too old; nothing deleted")
+          print("Protected active version:", active)
+          allow=re.compile(r"^Wuque64Hub-(?:Setup|Portable)-4\.3\.(?:40|43)-beta\.\d+\.\d+-x64\.exe(?:\.blockmap)?$")
+          # Validate every target before any deletion; preserve historical YAML/JSON,
+          # the current feed, the final 4.3.43 build and every subsequent version.
+          existing={a["id"]:a for a in r["assets"]}
+          pending=[]
+          for x in selected:
+              if not allow.fullmatch(x["name"]) or "4.3.43-beta.28.1" in x["name"] or active in x["name"]:
+                  raise RuntimeError("Protected target: "+x["name"])
+              a=existing.get(x["id"])
+              if a is None: continue
+              if a["name"]!=x["name"] or a["size"]!=x["size"]:
+                  raise RuntimeError("Snapshot mismatch: "+x["name"])
+              pending.append(x)
+          removed=total=0
+          try:
+              for x in pending:
+                  # Recheck the feed on every iteration. Concurrent publication
+                  # or an unexpected asset change stops the operation.
+                  current=get_release()
+                  feed=[a for a in current["assets"] if a["name"]=="beta.yml"]
+                  if len(feed)!=1 or feed[0]["id"]!=feed_id or feed[0].get("digest")!=digest:
+                      raise RuntimeError("Active feed changed; stop safely")
+                  a=next((a for a in current["assets"] if a["id"]==x["id"]),None)
+                  if a is None: continue
+                  if a["name"]!=x["name"] or a["size"]!=x["size"]:
+                      raise RuntimeError("Target changed")
+                  subprocess.run(["gh","api","--method","DELETE",root+"/releases/assets/"+str(x["id"])],check=True)
+                  removed+=1;total+=x["size"]
+                  print("Deleted",x["name"],flush=True)
+          finally:
+              after=get_release()
+              summary=f"Removed {removed} legacy binaries, {total} bytes; {len(after['assets'])} release assets remain. Protected active feed, 4.3.43-beta.28.1 and all newer versions. Historical YAML/JSON and Git history unchanged."
+              print(summary)
+              with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as f: f.write(summary+"\n")
+          PY
